@@ -251,9 +251,15 @@ func (s *Session) readSet(setHdr setHeader, sl *slice) ([]TemplateRecord, []Data
 		case setHdr.SetID == 3:
 			// Options Template Set, not handled
 			if debug {
-				dl.Println("skipping option template set")
+				dl.Println("parsing template options set")
 			}
-			sl.Cut(sl.Len())
+			tr := s.readTemplateOptionsRecord(sl)
+			trecs = append(trecs, tr)
+
+			s.registerTemplateRecord(tr)
+			if debug {
+				dl.Printf("registered template: %+v", tr)
+			}
 
 		case setHdr.SetID > 3 && setHdr.SetID < 256:
 			// Reserved, shouldn't happen
@@ -343,13 +349,54 @@ func (s *Session) readTemplateRecord(sl *slice) TemplateRecord {
 		f := TemplateFieldSpecifier{}
 		f.FieldID = sl.Uint16()
 		f.Length = sl.Uint16()
+		if debug {
+			dl.Printf("\n\tf.FieldID: %+v\n", f.FieldID)
+		}
 		if f.FieldID >= 0x8000 {
 			f.FieldID -= 0x8000
 			f.EnterpriseID = sl.Uint32()
 		}
+		if debug {
+			dl.Printf("\n\tf.FieldID: %+v\n\tf.Length: %+v\n\tf.EnterpriseID: %+v", f.FieldID, f.Length, f.EnterpriseID)
+		}
 		tr.FieldSpecifiers[i] = f
 	}
 
+	return tr
+}
+
+func (s *Session) readTemplateOptionsRecord(sl *slice) TemplateRecord {
+	var th templateHeader
+	th.unmarshal(sl)
+	sl.Uint16()
+	if debug {
+		dl.Printf("templateHeader: %+v", th)
+	}
+
+	var tr TemplateRecord
+	tr.TemplateID = th.TemplateID
+	tr.FieldSpecifiers = make([]TemplateFieldSpecifier, th.FieldCount)
+	for i := 0; i < int(th.FieldCount); i++ {
+		f := TemplateFieldSpecifier{}
+		f.FieldID = sl.Uint16()
+		f.Length = sl.Uint16()
+		if debug {
+			dl.Printf("\n\tf.FieldID: %+v\n", f.FieldID)
+		}
+		if f.FieldID >= 0x8000 {
+			f.FieldID -= 0x8000
+			f.EnterpriseID = sl.Uint32()
+		}
+		if debug {
+			dl.Printf("\n\tf.FieldID: %+v\n\tf.Length: %+v\n\tf.EnterpriseID: %+v", f.FieldID, f.Length, f.EnterpriseID)
+		}
+		tr.FieldSpecifiers[i] = f
+	}
+	if debug {
+		dl.Printf("len(sl): %d\nvalue sl: %x", sl.Len(), sl)
+	}
+
+	sl.Uint16()
 	return tr
 }
 

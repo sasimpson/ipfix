@@ -22,6 +22,11 @@ func (s *slice) Cut(length int) []byte {
 	}
 	val := s.bs[:length]
 	s.bs = s.bs[length:]
+	if debug {
+		dl.Println("Cut")
+		dl.Printf("val: %x", val)
+		dl.Printf("s.bs: %x", s.bs)
+	}
 	return val
 }
 
@@ -42,6 +47,11 @@ func (s *slice) Uint16() uint16 {
 	}
 	v := binary.BigEndian.Uint16(s.bs)
 	s.bs = s.bs[2:]
+	if debug {
+		dl.Println("Uint16")
+		dl.Printf("Uint16: %x", v)
+		dl.Printf("s.bs: %x", s.bs)
+	}
 	return v
 }
 
@@ -52,6 +62,11 @@ func (s *slice) Uint32() uint32 {
 	}
 	v := binary.BigEndian.Uint32(s.bs)
 	s.bs = s.bs[4:]
+	if debug {
+		dl.Println("Uint32")
+		dl.Printf("Uint32: %x", v)
+		dl.Printf("s.bs: %x", s.bs)
+	}
 	return v
 }
 

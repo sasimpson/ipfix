@@ -1,1 +1,7 @@
 ipfix.xml
+
+*.patch
+
+*.rej
+
+*.orig
