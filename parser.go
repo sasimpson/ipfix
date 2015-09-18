@@ -249,11 +249,11 @@ func (s *Session) readSet(setHdr setHeader, sl *slice) ([]TemplateRecord, []Data
 			}
 
 		case setHdr.SetID == 3:
-			// Options Template Set, not handled
+			// Options Template Set, need to be handled properly.
 			if debug {
 				dl.Println("parsing template options set")
 			}
-			tr := s.readTemplateOptionsRecord(sl)
+			tr := s.readTemplateRecord(sl)
 			trecs = append(trecs, tr)
 
 			s.registerTemplateRecord(tr)
@@ -338,6 +338,10 @@ func (s *Session) readDataRecord(sl *slice, tpl []TemplateFieldSpecifier) (DataR
 func (s *Session) readTemplateRecord(sl *slice) TemplateRecord {
 	var th templateHeader
 	th.unmarshal(sl)
+	if th.TemplateID == 3 {
+		//need to pull the scope from the options header, should do something with this
+		sl.Uint16()
+	}
 	if debug {
 		dl.Printf("templateHeader: %+v", th)
 	}
@@ -361,42 +365,11 @@ func (s *Session) readTemplateRecord(sl *slice) TemplateRecord {
 		}
 		tr.FieldSpecifiers[i] = f
 	}
-
-	return tr
-}
-
-func (s *Session) readTemplateOptionsRecord(sl *slice) TemplateRecord {
-	var th templateHeader
-	th.unmarshal(sl)
-	sl.Uint16()
-	if debug {
-		dl.Printf("templateHeader: %+v", th)
+	if th.TemplateID == 3 {
+		//pull the scope again
+		sl.Uint16()
 	}
 
-	var tr TemplateRecord
-	tr.TemplateID = th.TemplateID
-	tr.FieldSpecifiers = make([]TemplateFieldSpecifier, th.FieldCount)
-	for i := 0; i < int(th.FieldCount); i++ {
-		f := TemplateFieldSpecifier{}
-		f.FieldID = sl.Uint16()
-		f.Length = sl.Uint16()
-		if debug {
-			dl.Printf("\n\tf.FieldID: %+v\n", f.FieldID)
-		}
-		if f.FieldID >= 0x8000 {
-			f.FieldID -= 0x8000
-			f.EnterpriseID = sl.Uint32()
-		}
-		if debug {
-			dl.Printf("\n\tf.FieldID: %+v\n\tf.Length: %+v\n\tf.EnterpriseID: %+v", f.FieldID, f.Length, f.EnterpriseID)
-		}
-		tr.FieldSpecifiers[i] = f
-	}
-	if debug {
-		dl.Printf("len(sl): %d\nvalue sl: %x", sl.Len(), sl)
-	}
-
-	sl.Uint16()
 	return tr
 }
 
